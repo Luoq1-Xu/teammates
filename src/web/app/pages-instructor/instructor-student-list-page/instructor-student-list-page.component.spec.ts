@@ -75,6 +75,12 @@ describe('InstructorStudentListPageComponent', () => {
       numOfStudents: 0,
       numOfTeams: 0,
     },
+    sectionList: [],
+    teamList: [],
+    selectedSections: [],
+    selectedTeams: [],
+    isSectionsDropdownOpen: false,
+    isTeamsDropdownOpen: false,
   };
 
   beforeEach(waitForAsync(() => {

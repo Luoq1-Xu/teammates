@@ -1,5 +1,5 @@
 import { HttpStatusCode } from '@angular/common/http';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChildren, QueryList, ElementRef, HostListener } from '@angular/core';
 import { finalize } from 'rxjs/operators';
 import { CourseService, CourseStatistics } from '../../../services/course.service';
 import { InstructorService } from '../../../services/instructor.service';
@@ -27,6 +27,9 @@ interface StudentIndexedData {
 export interface CourseTab {
   course: Course;
   studentList: StudentListRowModel[];
+  filteredStudentList?: StudentListRowModel[];
+  lastSectionFilter?: string;
+  lastTeamFilter?: string;
   studentSortBy: SortBy;
   studentSortOrder: SortOrder;
   hasTabExpanded: boolean;
@@ -34,6 +37,12 @@ export interface CourseTab {
   hasLoadingFailed: boolean;
   isAbleToViewStudents: boolean;
   stats: CourseStatistics;
+  sectionList: string[];
+  teamList: string[];
+  selectedSections: string[];
+  selectedTeams: string[];
+  isSectionsDropdownOpen: boolean;
+  isTeamsDropdownOpen: boolean;
 }
 
 /**
@@ -46,6 +55,8 @@ export interface CourseTab {
   animations: [collapseAnim],
 })
 export class InstructorStudentListPageComponent implements OnInit {
+  @ViewChildren('sectionsDropdownContainer') sectionsDropdownContainers!: QueryList<ElementRef>;
+  @ViewChildren('teamsDropdownContainer') teamsDropdownContainers!: QueryList<ElementRef>;
 
   courseTabList: CourseTab[] = [];
   hasLoadingFailed: boolean = false;
@@ -61,6 +72,15 @@ export class InstructorStudentListPageComponent implements OnInit {
               private studentService: StudentService,
               private statusMessageService: StatusMessageService,
               private tableComparatorService: TableComparatorService) {
+  }
+
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    // Close all dropdowns when clicking outside
+    this.courseTabList.forEach(courseTab => {
+      courseTab.isSectionsDropdownOpen = false;
+      courseTab.isTeamsDropdownOpen = false;
+    });
   }
 
   ngOnInit(): void {
@@ -94,6 +114,12 @@ export class InstructorStudentListPageComponent implements OnInit {
                   numOfStudents: 0,
                   numOfTeams: 0,
                 },
+                sectionList: [],
+                teamList: [],
+                selectedSections: [],
+                selectedTeams: [],
+                isSectionsDropdownOpen: false,
+                isTeamsDropdownOpen: false
               };
 
               this.courseTabList.push(courseTab);
@@ -106,6 +132,24 @@ export class InstructorStudentListPageComponent implements OnInit {
           },
           complete: () => this.sortCourses(this.coursesSortBy),
         });
+  }
+
+  /**
+   * Toggles the sections dropdown for a course tab.
+   */
+  toggleSectionsDropdown(courseTab: CourseTab): void {
+    const wasOpen = courseTab.isSectionsDropdownOpen;
+    courseTab.isTeamsDropdownOpen = false;
+    courseTab.isSectionsDropdownOpen = !wasOpen;
+  }
+
+  /**
+   * Toggles the teams dropdown for a course tab.
+   */
+  toggleTeamsDropdown(courseTab: CourseTab): void {
+    const wasOpen = courseTab.isTeamsDropdownOpen;
+    courseTab.isSectionsDropdownOpen = false;
+    courseTab.isTeamsDropdownOpen = !wasOpen;
   }
 
   /**
@@ -128,6 +172,21 @@ export class InstructorStudentListPageComponent implements OnInit {
         .subscribe({
           next: (students: Students) => {
             courseTab.studentList = []; // Reset the list of students for the course
+
+            // Extract unique sections and teams
+            const uniqueSections = new Set<string>();
+            const uniqueTeams = new Set<string>();
+
+            students.students.forEach((student: Student) => {
+              uniqueSections.add(student.sectionName);
+              uniqueTeams.add(student.teamName);
+            });
+            
+            courseTab.sectionList = Array.from(uniqueSections).sort();
+            courseTab.teamList = Array.from(uniqueTeams).sort();
+            courseTab.selectedSections = [];
+            courseTab.selectedTeams = [];
+
             const sections: StudentIndexedData = students.students.reduce((acc: StudentIndexedData, x: Student) => {
               const term: string = x.sectionName;
               (acc[term] = acc[term] || []).push(x);
@@ -162,6 +221,7 @@ export class InstructorStudentListPageComponent implements OnInit {
                     });
 
                     courseTab.stats = this.courseService.calculateCourseStatistics(students.students);
+                    this.updateFilteredStudentList(courseTab); // Initialize filtered list
 
                   },
                   error: (resp: ErrorMessageOutput) => {
@@ -197,6 +257,7 @@ export class InstructorStudentListPageComponent implements OnInit {
         const students: Student[] =
             courseTab.studentList.map((studentModel: StudentListRowModel) => studentModel.student);
         courseTab.stats = this.courseService.calculateCourseStatistics(students);
+        this.updateFilteredStudentList(courseTab); // Update filtered list after removal
 
         this.statusMessageService
             .showSuccessToast(`Student is successfully deleted from course "${courseTab.course.courseId}"`);
@@ -317,5 +378,125 @@ export class InstructorStudentListPageComponent implements OnInit {
 
       return this.tableComparatorService.compare(by, order, strA, strB);
     };
+  }
+
+  /**
+   * Initializes a new CourseTab with default values.
+   */
+  initializeCourseTab(course: Course): CourseTab {
+    return {
+      course,
+      studentList: [],
+      studentSortBy: SortBy.NONE,
+      studentSortOrder: SortOrder.ASC,
+      hasTabExpanded: false,
+      hasStudentLoaded: false,
+      hasLoadingFailed: false,
+      isAbleToViewStudents: true,
+      stats: {
+        numOfSections: 0,
+        numOfStudents: 0,
+        numOfTeams: 0,
+      },
+      sectionList: [],
+      teamList: [],
+      selectedSections: [],
+      selectedTeams: [],
+      isSectionsDropdownOpen: false,
+      isTeamsDropdownOpen: false,
+    };
+  }
+
+  /**
+   * Toggles the selection of a section for filtering.
+   */
+  toggleSectionSelection(courseTab: CourseTab, section: string): void {
+    const index = courseTab.selectedSections.indexOf(section);
+    if (index === -1) {
+      // Add section to selected sections
+      courseTab.selectedSections = [...courseTab.selectedSections, section];
+    } else {
+      // Remove section from selected sections
+      courseTab.selectedSections = courseTab.selectedSections.filter(s => s !== section);
+    }
+    this.updateFilteredStudentList(courseTab);
+  }
+
+  /**
+   * Toggles the selection of a team for filtering.
+   */
+  toggleTeamSelection(courseTab: CourseTab, team: string): void {
+    const index = courseTab.selectedTeams.indexOf(team);
+    if (index === -1) {
+      // Add team to selected teams
+      courseTab.selectedTeams = [...courseTab.selectedTeams, team];
+    } else {
+      // Remove team from selected teams
+      courseTab.selectedTeams = courseTab.selectedTeams.filter(t => t !== team);
+    }
+    this.updateFilteredStudentList(courseTab);
+  }
+
+  /**
+   * Checks if a section is selected.
+   */
+  isSectionSelected(courseTab: CourseTab, section: string): boolean {
+    return courseTab.selectedSections.includes(section);
+  }
+
+  /**
+   * Checks if a team is selected.
+   */
+  isTeamSelected(courseTab: CourseTab, team: string): boolean {
+    return courseTab.selectedTeams.includes(team);
+  }
+
+  /**
+   * Clears all section selections.
+   */
+  clearSectionSelections(courseTab: CourseTab): void {
+    courseTab.selectedSections = [];
+    this.updateFilteredStudentList(courseTab);
+  }
+
+  /**
+   * Clears all team selections.
+   */
+  clearTeamSelections(courseTab: CourseTab): void {
+    courseTab.selectedTeams = [];
+    this.updateFilteredStudentList(courseTab);
+  }
+
+  /**
+   * Forces an update to the student list to make filtering work.
+   */
+  private updateFilteredStudentList(courseTab: CourseTab): void {
+    courseTab.filteredStudentList = this.getFilteredStudentList(courseTab);
+  }
+
+  /**
+   * Returns a filtered list of students based on selected sections and teams.
+   */
+  getFilteredStudentList(courseTab: CourseTab): StudentListRowModel[] {
+    // If no filters are applied, return all students
+    if (courseTab.selectedSections.length === 0 && courseTab.selectedTeams.length === 0) {
+      // Always create a NEW array reference to trigger change detection
+      return [...courseTab.studentList];
+    }
+    
+    // Apply filters
+    const filtered = courseTab.studentList.filter(studentRow => {
+      // Check if student's section matches any selected section
+      const sectionMatches = courseTab.selectedSections.length === 0 || 
+                            courseTab.selectedSections.includes(studentRow.student.sectionName);
+                            
+      // Check if student's team matches any selected team
+      const teamMatches = courseTab.selectedTeams.length === 0 || 
+                        courseTab.selectedTeams.includes(studentRow.student.teamName);
+                        
+      return sectionMatches && teamMatches;
+    });
+    
+    return [...filtered];
   }
 }

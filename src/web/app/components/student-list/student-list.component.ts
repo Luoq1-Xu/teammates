@@ -40,17 +40,32 @@ export class StudentListComponent implements OnInit {
   @Input() isHideTableHead: boolean = false;
   @Input() enableRemindButton: boolean = false;
   @Input() isActionButtonsEnabled: boolean = true;
-  @Input() students: StudentListRowModel[] = [];
+
+
+  private _students: StudentListRowModel[] = [];
+
+  @Input()
+  get students(): StudentListRowModel[] {
+    return this._students;
+  }
+
+  /**
+   * Setter for students, which also sets the row data if columns data is already set.
+   * If no value is provided, it defaults to an empty array.
+   */
+  set students(value: StudentListRowModel[]) {
+    this._students = value || [];
+    if (this.columnsData?.length > 0) {
+      this.setRowData();
+    }
+  }
+
+
   @Input() tableSortBy: SortBy = SortBy.NONE;
   @Input() tableSortOrder: SortOrder = SortOrder.ASC;
   @Input() searchString: string = '';
   @Input() headerColorScheme: SortableTableHeaderColorScheme = SortableTableHeaderColorScheme.OTHERS;
   @Input() customHeaderStyle: string = 'bg-light';
-
-  @Input() set studentModels(studentRowModels: StudentListRowModel[]) {
-    this.students = studentRowModels;
-    this.setRowData();
-  }
 
   @Input() set hiddenStudents(hiddenStudents: string[]) {
     this.listOfStudentsToHide = hiddenStudents;
