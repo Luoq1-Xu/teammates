@@ -43,21 +43,87 @@
                       </div>
                     </div>
                     <div class="col-md-4">
-                      <div class="card">
-                        <div class="card-body fw-bold fs-5" id="num-sections">
-                          {{courseTab.stats.numOfSections}} sections
+                      <div class="card custom-dropdown" #sectionsDropdownContainer>
+                        <!-- Dropdown trigger button -->
+                        <div class="card-body fw-bold fs-5 d-flex justify-content-between align-items-center cursor-pointer"
+                            id="sections-dropdown-{{courseTab.course.courseId}}"
+                            (click)="toggleSectionsDropdown(courseTab); $event.stopPropagation()">
+                          <span>{{courseTab.stats.numOfSections}} sections</span>
+                          <i class="fas" [ngClass]="courseTab.isSectionsDropdownOpen ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                        </div>
+                        
+                        <!-- Dropdown menu (custom implementation) -->
+                        <div *ngIf="courseTab.isSectionsDropdownOpen" 
+                            class="custom-dropdown-menu" 
+                            (click)="$event.stopPropagation()">
+                          <div class="dropdown-item">
+                            <div class="form-check">
+                              <input class="form-check-input" type="checkbox"
+                                    [checked]="courseTab.selectedSections.length === 0"
+                                    (change)="clearSectionSelections(courseTab)"
+                                    id="all-sections-{{courseTab.course.courseId}}">
+                              <label class="form-check-label" for="all-sections-{{courseTab.course.courseId}}">
+                                All Sections
+                              </label>
+                            </div>
+                          </div>
+                          <div class="dropdown-divider"></div>
+                          <div *ngFor="let section of courseTab.sectionList" class="dropdown-item">
+                            <div class="form-check">
+                              <input class="form-check-input" type="checkbox"
+                                    [checked]="isSectionSelected(courseTab, section)"
+                                    (change)="toggleSectionSelection(courseTab, section)"
+                                    id="section-{{courseTab.course.courseId}}-{{section}}">
+                              <label class="form-check-label" for="section-{{courseTab.course.courseId}}-{{section}}">
+                                {{section}}
+                              </label>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
                     <div class="col-md-4">
-                      <div class="card">
-                        <div class="card-body fw-bold fs-5" id="num-teams">
-                          {{courseTab.stats.numOfTeams}} teams
+                      <div class="card custom-dropdown" #teamsDropdownContainer>
+                        <!-- Dropdown trigger button -->
+                        <div class="card-body fw-bold fs-5 d-flex justify-content-between align-items-center cursor-pointer"
+                            id="teams-dropdown-{{courseTab.course.courseId}}"
+                            (click)="toggleTeamsDropdown(courseTab); $event.stopPropagation()">
+                          <span>{{courseTab.stats.numOfTeams}} teams</span>
+                          <i class="fas" [ngClass]="courseTab.isTeamsDropdownOpen ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                        </div>
+
+                        <!-- Dropdown menu (custom implementation) -->
+                        <div *ngIf="courseTab.isTeamsDropdownOpen" 
+                            class="custom-dropdown-menu" 
+                            (click)="$event.stopPropagation()">
+                          <div class="dropdown-item">
+                            <div class="form-check">
+                              <input class="form-check-input" type="checkbox"
+                                    [checked]="courseTab.selectedTeams.length === 0"
+                                    (change)="clearTeamSelections(courseTab)"
+                                    id="all-teams-{{courseTab.course.courseId}}">
+                              <label class="form-check-label" for="all-teams-{{courseTab.course.courseId}}">
+                                All Teams
+                              </label>
+                            </div>
+                          </div>
+                          <div class="dropdown-divider"></div>
+                          <div *ngFor="let team of courseTab.teamList" class="dropdown-item">
+                            <div class="form-check">
+                              <input class="form-check-input" type="checkbox"
+                                    [checked]="isTeamSelected(courseTab, team)"
+                                    (change)="toggleTeamSelection(courseTab, team)"
+                                    id="team-{{courseTab.course.courseId}}-{{team}}">
+                              <label class="form-check-label" for="team-{{courseTab.course.courseId}}-{{team}}">
+                                {{team}}
+                              </label>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-
+                  
                   <hr>
 
                   <a id="btn-enroll" class="btn btn-success"
@@ -67,13 +133,13 @@
                   </a>
                   <br><br>
                   <tm-student-list
-                      [courseId]="courseTab.course.courseId"
-                      [students]="courseTab.studentList"
-                      [tableSortBy]="courseTab.studentSortBy"
-                      [tableSortOrder]="courseTab.studentSortOrder"
-                      [useGrayHeading]="false"
-                      [enableRemindButton]="true"
-                      (removeStudentFromCourseEvent)="removeStudentFromCourse(courseTab, $event)">
+                    [courseId]="courseTab.course.courseId"
+                    [students]="courseTab.filteredStudentList"
+                    [tableSortBy]="courseTab.studentSortBy"
+                    [tableSortOrder]="courseTab.studentSortOrder"
+                    [useGrayHeading]="false"
+                    [enableRemindButton]="true"
+                    (removeStudentFromCourseEvent)="removeStudentFromCourse(courseTab, $event)">
                   </tm-student-list>
                 </ng-container>
               </div>
