@@ -1,0 +1,12 @@
+<tm-loading-retry [shouldShowRetry]="hasLoadingFailed" [message]="'Failed to load question analytics'" (retryEvent)="loadResponses()">
+  <div *tmIsLoading="isLoading">
+    <div *ngIf="questionResult">
+      <h5>Response Statistics</h5>
+      <p>Total Responses: {{ respondedCount }} / {{ responses.length }}</p>
+      <p>Response Rate: {{ responseRate.toFixed(2) }}%</p>
+    </div>
+    <div *ngIf="!questionResult && !isLoading">
+      <p>No responses submitted for this question yet.</p>
+    </div>
+  </div>
+</tm-loading-retry>
