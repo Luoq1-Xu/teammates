@@ -97,6 +97,18 @@
         }"
         >View Results (course-wide)</a
       >
+      <a
+        class="btn dropdown-item clickable"
+        [ngClass]="{
+          disabled: !instructorPrivileges.canViewSessionInSections
+        }"
+        tmRouterLink="/web/instructor/sessions/analytics"
+        [queryParams]="{
+          courseid: courseId,
+          fsname: fsName
+        }"
+        >View Analytics</a
+      >
       <button
         class="btn-unpublish-{{ idx }} btn dropdown-item clickable"
         ngbTooltip="Make responses no longer visible"

@@ -31,6 +31,11 @@ const routes: Routes = [
         },
       },
       {
+        path: 'analytics',
+        loadChildren: () => import('./instructor-analytics-page/instructor-analytics-page.module')
+            .then((m: any) => m.InstructorAnalyticsPageModule),
+      },
+      {
         path: 'details',
         loadChildren: () => import('./instructor-course-details-page/instructor-course-details-page.module')
             .then((m: any) => m.InstructorCourseDetailsPageModule),
@@ -116,6 +121,14 @@ const routes: Routes = [
         path: 'report',
         loadChildren: () => import('./instructor-session-result-page/instructor-session-result-page.module')
             .then((m: any) => m.InstructorSessionResultPageModule),
+      },
+      {
+        path: 'analytics',
+        loadChildren: () => import('./instructor-session-analytics-page/instructor-session-analytics-page.module')
+            .then((m: any) => m.InstructorSessionAnalyticsPageModule),
+        data: {
+          pageTitle: 'Session Analytics',
+        },
       },
     ],
   },

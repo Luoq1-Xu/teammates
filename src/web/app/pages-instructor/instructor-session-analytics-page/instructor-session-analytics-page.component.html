@@ -1,0 +1,51 @@
+<h1>
+  Feedback Session Analytics
+</h1>
+<tm-loading-retry [shouldShowRetry]="hasLoadingFailed" [message]="'Failed to load session analytics'" (retryEvent)="retryLoadData()">
+  <div *tmIsLoading="isLoading">
+    <div class="card bg-light top-padded text-center text-sm-start" *ngIf="session">
+      <div class="card-body row info-card-padding">
+        <div class="col-sm-12 col-md-12 col-lg-4">
+          <div class="form-group row">
+            <label class="col-lg-4 control-label"><b>Course ID:</b></label>
+            <div id="course-id" class="col-lg-8">
+              <p class="form-control-static">{{ session.courseId }}</p>
+            </div>
+          </div>
+          <div class="form-group row">
+            <label class="col-lg-4 control-label"><b>Session:</b></label>
+            <div id="session-name" class="col-lg-8">
+              <p class="form-control-static">{{ session.feedbackSessionName }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="top-padded">
+      <div id="question-panel-{{ questionModel.question.questionNumber }}" class="card margin-bottom-15px" *ngFor="let questionModel of questions">
+        <div class="card-header bg-info cursor-pointer" (click)="toggleQuestionTab(questionModel)">
+          <div class="d-flex w-100 flex-fill flex-md-row flex-column align-items-md-center align-items-start">
+            <div>
+              <tm-question-text-with-info [questionNumber]="questionModel.question.questionNumber"
+                                          [questionDetails]="questionModel.question.questionDetails">
+              </tm-question-text-with-info>
+            </div>
+          </div>
+          <div class="chevron-collapse">
+            <tm-panel-chevron chevronColor="black" [isExpanded]="questionModel.isTabExpanded"></tm-panel-chevron>
+          </div>
+        </div>
+        <div *ngIf="questionModel.isTabExpanded" @collapseAnim>
+          <div class="card-body">
+            <tm-question-analytics
+              [question]="questionModel.question"
+              [courseId]="courseId"
+              [fsName]="fsName">
+            </tm-question-analytics>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</tm-loading-retry>
