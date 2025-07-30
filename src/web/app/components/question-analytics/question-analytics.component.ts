@@ -3,10 +3,13 @@ import { finalize } from 'rxjs/operators';
 import { FeedbackSessionsService } from '../../../services/feedback-sessions.service';
 import { StatusMessageService } from '../../../services/status-message.service';
 import {
+  FeedbackConstantSumQuestionDetails,
+  FeedbackConstantSumResponseDetails,
   FeedbackMcqQuestionDetails,
   FeedbackMcqResponseDetails,
   FeedbackMsqQuestionDetails,
   FeedbackMsqResponseDetails,
+  FeedbackNumericalScaleResponseDetails,
   FeedbackQuestion,
   FeedbackQuestionType,
   QuestionOutput,
@@ -44,8 +47,26 @@ export class QuestionAnalyticsComponent implements OnChanges {
   msqTotalSelections = 0;
   msqAverageSelectionsPerResponse = 0;
 
+  // NUMSCALE-specific properties
+  numscaleValues: number[] = [];
+  numscaleAverage = 0;
+  numscaleMedian = 0;
+  numscaleMin = 0;
+  numscaleMax = 0;
+  numscaleStdDev = 0;
+  numscaleDistribution: Record<number, number> = {};
+
+  // CONSTSUM-specific properties
+  constsumOptions: string[] = [];
+  constsumAveragePerOption: Record<string, number> = {};
+  constsumTotalPointsDistributed = 0;
+  constsumAveragePointsPerResponse = 0;
+
   // Expose enum for template
   FeedbackQuestionType: typeof FeedbackQuestionType = FeedbackQuestionType;
+
+  // Helper function for keyvalue pipe to preserve original order
+  originalOrder = (): number => 0;
 
   constructor(
     private feedbackSessionsService: FeedbackSessionsService,
@@ -82,6 +103,12 @@ export class QuestionAnalyticsComponent implements OnChanges {
             }
             if (this.question.questionType === FeedbackQuestionType.MSQ) {
               this.calculateMsqStatistics();
+            }
+            if (this.question.questionType === FeedbackQuestionType.NUMSCALE) {
+              this.calculateNumscaleStatistics();
+            }
+            if (this.question.questionType === FeedbackQuestionType.CONSTSUM) {
+              this.calculateConstsumStatistics();
             }
           }
         },
@@ -184,5 +211,94 @@ export class QuestionAnalyticsComponent implements OnChanges {
       const percentage = totalValidResponses > 0 ? (frequency / totalValidResponses) * 100 : 0;
       this.msqPercentagePerOption[choice] = +percentage.toFixed(1);
     }
+  }
+
+  calculateNumscaleStatistics(): void {
+    const validResponses = this.responses.filter((r) => !r.isMissingResponse);
+    this.numscaleValues = validResponses.map((response) => {
+      const numscaleResponse = response.responseDetails as FeedbackNumericalScaleResponseDetails;
+      return numscaleResponse.answer;
+    });
+
+    if (this.numscaleValues.length === 0) {
+      this.numscaleAverage = 0;
+      this.numscaleMedian = 0;
+      this.numscaleMin = 0;
+      this.numscaleMax = 0;
+      this.numscaleStdDev = 0;
+      this.numscaleDistribution = {};
+      return;
+    }
+
+    // Calculate basic statistics
+    const sortedValues = [...this.numscaleValues].sort((a, b) => a - b);
+    this.numscaleMin = sortedValues[0];
+    this.numscaleMax = sortedValues[sortedValues.length - 1];
+
+    // Calculate average
+    const sum = this.numscaleValues.reduce((acc, val) => acc + val, 0);
+    this.numscaleAverage = +(sum / this.numscaleValues.length).toFixed(2);
+
+    // Calculate median
+    const mid = Math.floor(sortedValues.length / 2);
+    this.numscaleMedian = sortedValues.length % 2 === 0
+      ? +((sortedValues[mid - 1] + sortedValues[mid]) / 2).toFixed(2)
+      : sortedValues[mid];
+
+    // Calculate standard deviation
+    const variance = this.numscaleValues.reduce((acc, val) => acc + Math.pow(val - this.numscaleAverage, 2), 0) / this.numscaleValues.length;
+    this.numscaleStdDev = +Math.sqrt(variance).toFixed(2);
+
+    // Calculate distribution
+    this.numscaleDistribution = {};
+    for (const value of this.numscaleValues) {
+      this.numscaleDistribution[value] = (this.numscaleDistribution[value] || 0) + 1;
+    }
+  }
+
+  calculateConstsumStatistics(): void {
+    const constsumQuestion = this.question.questionDetails as FeedbackConstantSumQuestionDetails;
+    this.constsumOptions = [...constsumQuestion.constSumOptions];
+
+    // Initialize averages
+    this.constsumAveragePerOption = {};
+    for (const option of this.constsumOptions) {
+      this.constsumAveragePerOption[option] = 0;
+    }
+
+    const validResponses = this.responses.filter((r) => !r.isMissingResponse);
+    if (validResponses.length === 0) {
+      this.constsumTotalPointsDistributed = 0;
+      this.constsumAveragePointsPerResponse = 0;
+      return;
+    }
+
+    let totalPointsAcrossAllResponses = 0;
+    const optionTotals: Record<string, number> = {};
+
+    // Initialize option totals
+    for (const option of this.constsumOptions) {
+      optionTotals[option] = 0;
+    }
+
+    // Sum up all points for each option across all responses
+    for (const response of validResponses) {
+      const constsumResponse = response.responseDetails as FeedbackConstantSumResponseDetails;
+      for (let i = 0; i < constsumResponse.answers.length && i < this.constsumOptions.length; i += 1) {
+        const points = constsumResponse.answers[i] || 0;
+        optionTotals[this.constsumOptions[i]] += points;
+        totalPointsAcrossAllResponses += points;
+      }
+    }
+
+    // Calculate averages per option
+    for (const option of this.constsumOptions) {
+      this.constsumAveragePerOption[option] = validResponses.length > 0
+        ? +(optionTotals[option] / validResponses.length).toFixed(1) : 0;
+    }
+
+    this.constsumTotalPointsDistributed = totalPointsAcrossAllResponses;
+    this.constsumAveragePointsPerResponse = validResponses.length > 0
+      ? +(totalPointsAcrossAllResponses / validResponses.length).toFixed(1) : 0;
   }
 }

@@ -170,8 +170,162 @@
         </div>
       </div>
 
+      <!-- NUMSCALE Question Visualization -->
+      <div *ngIf="question.questionType === FeedbackQuestionType.NUMSCALE">
+        <h5>Numerical Scale Response Analytics</h5>
+        <div class="row mb-3">
+          <div class="col-md-4">
+            <div class="card">
+              <div class="card-body">
+                <h6 class="card-title">Response Rate</h6>
+                <div class="mb-2">
+                  <div class="progress" style="height: 20px;">
+                    <div class="progress-bar"
+                         [class.bg-success]="responseRate >= 80"
+                         [class.bg-warning]="responseRate >= 50 && responseRate < 80"
+                         [class.bg-danger]="responseRate < 50"
+                         [style.width.%]="responseRate"
+                         role="progressbar">
+                      {{ responseRate.toFixed(1) }}%
+                    </div>
+                  </div>
+                </div>
+                <small class="text-muted">{{ respondedCount }} out of {{ responses.length }} respondents</small>
+              </div>
+            </div>
+            <div class="card mt-3">
+              <div class="card-body">
+                <h6 class="card-title">Statistical Summary</h6>
+                <div class="row text-center">
+                  <div class="col-6 mb-2">
+                    <div class="text-primary">
+                      <strong>{{ numscaleAverage }}</strong>
+                      <br>
+                      <small>Average</small>
+                    </div>
+                  </div>
+                  <div class="col-6 mb-2">
+                    <div class="text-info">
+                      <strong>{{ numscaleMedian }}</strong>
+                      <br>
+                      <small>Median</small>
+                    </div>
+                  </div>
+                  <div class="col-6 mb-2">
+                    <div class="text-success">
+                      <strong>{{ numscaleStdDev }}</strong>
+                      <br>
+                      <small>Std Dev</small>
+                    </div>
+                  </div>
+                  <div class="col-6">
+                    <div class="text-secondary">
+                      <strong>{{ numscaleMin }} - {{ numscaleMax }}</strong>
+                      <br>
+                      <small>Range</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-8">
+            <div class="card">
+              <div class="card-body">
+                <h6 class="card-title">Value Distribution</h6>
+                <div *ngFor="let value of numscaleDistribution | keyvalue: originalOrder" class="mb-3">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="fw-bold">{{ value.key }}</span>
+                    <span class="badge bg-success">{{ value.value }} responses</span>
+                  </div>
+                  <div class="progress" style="height: 15px;">
+                    <div class="progress-bar bg-success"
+                         [style.width.%]="(value.value / respondedCount) * 100"
+                         role="progressbar">
+                    </div>
+                  </div>
+                </div>
+                <div *ngIf="respondedCount === 0" class="text-muted">
+                  <em>No valid responses available for analysis</em>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONSTSUM Question Visualization -->
+      <div *ngIf="question.questionType === FeedbackQuestionType.CONSTSUM">
+        <h5>Constant Sum Response Analytics</h5>
+        <div class="row mb-3">
+          <div class="col-md-4">
+            <div class="card">
+              <div class="card-body">
+                <h6 class="card-title">Response Rate</h6>
+                <div class="mb-2">
+                  <div class="progress" style="height: 20px;">
+                    <div class="progress-bar"
+                         [class.bg-success]="responseRate >= 80"
+                         [class.bg-warning]="responseRate >= 50 && responseRate < 80"
+                         [class.bg-danger]="responseRate < 50"
+                         [style.width.%]="responseRate"
+                         role="progressbar">
+                      {{ responseRate.toFixed(1) }}%
+                    </div>
+                  </div>
+                </div>
+                <small class="text-muted">{{ respondedCount }} out of {{ responses.length }} respondents</small>
+              </div>
+            </div>
+            <div class="card mt-3">
+              <div class="card-body">
+                <h6 class="card-title">Point Distribution</h6>
+                <div class="row text-center">
+                  <div class="col-12 mb-2">
+                    <div class="text-info">
+                      <strong>{{ constsumTotalPointsDistributed }}</strong>
+                      <br>
+                      <small>Total Points</small>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <div class="text-primary">
+                      <strong>{{ constsumAveragePointsPerResponse }}</strong>
+                      <br>
+                      <small>Avg per Response</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-8">
+            <div class="card">
+              <div class="card-body">
+                <h6 class="card-title">Average Points per Option</h6>
+                <div *ngFor="let option of constsumOptions" class="mb-3">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="fw-bold">{{ option }}</span>
+                    <span class="badge bg-info">{{ constsumAveragePerOption[option] }} avg points</span>
+                  </div>
+                  <div class="progress" style="height: 15px;">
+                    <div class="progress-bar bg-info"
+                         [style.width.%]="constsumAveragePointsPerResponse > 0 ? (constsumAveragePerOption[option] / constsumAveragePointsPerResponse) * 100 : 0"
+                         role="progressbar">
+                    </div>
+                  </div>
+                </div>
+                <div *ngIf="constsumOptions.length === 0" class="text-muted">
+                  <em>No valid responses available for analysis</em>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Fallback for other question types (for now) -->
-      <div *ngIf="question.questionType !== FeedbackQuestionType.TEXT && question.questionType !== FeedbackQuestionType.MCQ && question.questionType !== FeedbackQuestionType.MSQ">
+      <div *ngIf="question.questionType !== FeedbackQuestionType.TEXT && question.questionType !== FeedbackQuestionType.MCQ && question.questionType !== FeedbackQuestionType.MSQ && question.questionType !== FeedbackQuestionType.NUMSCALE && question.questionType !== FeedbackQuestionType.CONSTSUM">
         <h5>Response Statistics</h5>
         <p>Total Responses: {{ respondedCount }} / {{ responses.length }}</p>
         <p>Response Rate: {{ responseRate.toFixed(2) }}%</p>
