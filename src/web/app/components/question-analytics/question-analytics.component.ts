@@ -13,6 +13,11 @@ import {
   FeedbackNumericalScaleResponseDetails,
   FeedbackQuestion,
   FeedbackQuestionType,
+  FeedbackRankOptionsQuestionDetails,
+  FeedbackRankOptionsResponseDetails,
+  FeedbackRankRecipientsResponseDetails,
+  FeedbackRubricQuestionDetails,
+  FeedbackRubricResponseDetails,
   QuestionOutput,
   ResponseOutput,
   SessionResults,
@@ -72,6 +77,25 @@ export class QuestionAnalyticsComponent implements OnChanges {
   contribStdDev = 0;
   contribDistribution: Record<number, number> = {};
 
+  // RUBRIC-specific properties
+  rubricChoices: string[] = [];
+  rubricSubQuestions: string[] = [];
+  rubricChoiceFrequency: Record<string, Record<string, number>> = {}; // subQuestion -> choice -> count
+  rubricChoicePercentage: Record<string, Record<string, number>> = {}; // subQuestion -> choice -> percentage
+
+  // RANK_OPTIONS-specific properties
+  rankOptions: string[] = [];
+  rankOptionAverageRank: Record<string, number> = {}; // option -> average rank
+  rankOptionFrequencyByRank: Record<string, Record<number, number>> = {}; // option -> rank -> count
+
+  // RANK_RECIPIENTS-specific properties
+  rankRecipientValues: number[] = [];
+  rankRecipientAverage = 0;
+  rankRecipientMedian = 0;
+  rankRecipientMin = 0;
+  rankRecipientMax = 0;
+  rankRecipientDistribution: Record<number, number> = {};
+
   // Expose enum for template
   FeedbackQuestionType: typeof FeedbackQuestionType = FeedbackQuestionType;
 
@@ -128,6 +152,15 @@ export class QuestionAnalyticsComponent implements OnChanges {
             }
             if (this.question.questionType === FeedbackQuestionType.CONTRIB) {
               this.calculateContribStatistics();
+            }
+            if (this.question.questionType === FeedbackQuestionType.RUBRIC) {
+              this.calculateRubricStatistics();
+            }
+            if (this.question.questionType === FeedbackQuestionType.RANK_OPTIONS) {
+              this.calculateRankOptionsStatistics();
+            }
+            if (this.question.questionType === FeedbackQuestionType.RANK_RECIPIENTS) {
+              this.calculateRankRecipientsStatistics();
             }
           }
         },
@@ -361,6 +394,141 @@ export class QuestionAnalyticsComponent implements OnChanges {
     this.contribDistribution = {};
     for (const value of this.contribValues) {
       this.contribDistribution[value] = (this.contribDistribution[value] || 0) + 1;
+    }
+  }
+
+  calculateRubricStatistics(): void {
+    const rubricQuestion = this.question.questionDetails as FeedbackRubricQuestionDetails;
+    this.rubricChoices = [...rubricQuestion.rubricChoices];
+    this.rubricSubQuestions = [...rubricQuestion.rubricSubQuestions];
+
+    // Initialize frequency counters
+    this.rubricChoiceFrequency = {};
+    this.rubricChoicePercentage = {};
+    
+    for (const subQuestion of this.rubricSubQuestions) {
+      this.rubricChoiceFrequency[subQuestion] = {};
+      this.rubricChoicePercentage[subQuestion] = {};
+      for (const choice of this.rubricChoices) {
+        this.rubricChoiceFrequency[subQuestion][choice] = 0;
+      }
+    }
+
+    const validResponses = this.responses.filter((r) => !r.isMissingResponse);
+    if (validResponses.length === 0) {
+      return;
+    }
+
+    // Count responses for each sub-question and choice
+    for (const response of validResponses) {
+      const rubricResponse = response.responseDetails as FeedbackRubricResponseDetails;
+      for (let i = 0; i < rubricResponse.answer.length && i < this.rubricSubQuestions.length; i += 1) {
+        const choiceIndex = rubricResponse.answer[i];
+        if (choiceIndex >= 0 && choiceIndex < this.rubricChoices.length) {
+          const subQuestion = this.rubricSubQuestions[i];
+          const choice = this.rubricChoices[choiceIndex];
+          this.rubricChoiceFrequency[subQuestion][choice] += 1;
+        }
+      }
+    }
+
+    // Calculate percentages
+    for (const subQuestion of this.rubricSubQuestions) {
+      const totalResponses = validResponses.length;
+      for (const choice of this.rubricChoices) {
+        const frequency = this.rubricChoiceFrequency[subQuestion][choice] || 0;
+        const percentage = totalResponses > 0 ? (frequency / totalResponses) * 100 : 0;
+        this.rubricChoicePercentage[subQuestion][choice] = +percentage.toFixed(1);
+      }
+    }
+  }
+
+  calculateRankOptionsStatistics(): void {
+    const rankQuestion = this.question.questionDetails as FeedbackRankOptionsQuestionDetails;
+    this.rankOptions = [...rankQuestion.options];
+
+    // Initialize counters
+    this.rankOptionAverageRank = {};
+    this.rankOptionFrequencyByRank = {};
+    
+    for (const option of this.rankOptions) {
+      this.rankOptionAverageRank[option] = 0;
+      this.rankOptionFrequencyByRank[option] = {};
+    }
+
+    const validResponses = this.responses.filter((r) => !r.isMissingResponse);
+    if (validResponses.length === 0) {
+      return;
+    }
+
+    const optionRankTotals: Record<string, number[]> = {};
+    for (const option of this.rankOptions) {
+      optionRankTotals[option] = [];
+    }
+
+    // Collect all ranks for each option
+    for (const response of validResponses) {
+      const rankResponse = response.responseDetails as FeedbackRankOptionsResponseDetails;
+      for (let i = 0; i < rankResponse.answers.length && i < this.rankOptions.length; i += 1) {
+        const rank = rankResponse.answers[i];
+        if (rank > 0) { // Valid rank (typically 1-based)
+          const option = this.rankOptions[i];
+          optionRankTotals[option].push(rank);
+          
+          // Count frequency by rank
+          if (!this.rankOptionFrequencyByRank[option][rank]) {
+            this.rankOptionFrequencyByRank[option][rank] = 0;
+          }
+          this.rankOptionFrequencyByRank[option][rank] += 1;
+        }
+      }
+    }
+
+    // Calculate average ranks
+    for (const option of this.rankOptions) {
+      const ranks = optionRankTotals[option];
+      if (ranks.length > 0) {
+        const sum = ranks.reduce((acc, rank) => acc + rank, 0);
+        this.rankOptionAverageRank[option] = +(sum / ranks.length).toFixed(2);
+      }
+    }
+  }
+
+  calculateRankRecipientsStatistics(): void {
+    const validResponses = this.responses.filter((r) => !r.isMissingResponse);
+    this.rankRecipientValues = validResponses.map((response) => {
+      const rankResponse = response.responseDetails as FeedbackRankRecipientsResponseDetails;
+      return rankResponse.answer;
+    });
+
+    if (this.rankRecipientValues.length === 0) {
+      this.rankRecipientAverage = 0;
+      this.rankRecipientMedian = 0;
+      this.rankRecipientMin = 0;
+      this.rankRecipientMax = 0;
+      this.rankRecipientDistribution = {};
+      return;
+    }
+
+    // Calculate basic statistics
+    const sortedValues = [...this.rankRecipientValues].sort((a, b) => a - b);
+    this.rankRecipientMin = sortedValues[0];
+    this.rankRecipientMax = sortedValues[sortedValues.length - 1];
+
+    // Calculate average
+    const sum = this.rankRecipientValues.reduce((acc, val) => acc + val, 0);
+    this.rankRecipientAverage = +(sum / this.rankRecipientValues.length).toFixed(2);
+
+    // Calculate median
+    const mid = Math.floor(sortedValues.length / 2);
+    this.rankRecipientMedian = sortedValues.length % 2 === 0
+      ? +((sortedValues[mid - 1] + sortedValues[mid]) / 2).toFixed(2)
+      : sortedValues[mid];
+
+    // Calculate distribution
+    this.rankRecipientDistribution = {};
+    for (const value of this.rankRecipientValues) {
+      this.rankRecipientDistribution[value] = (this.rankRecipientDistribution[value] || 0) + 1;
     }
   }
 }

@@ -548,12 +548,226 @@
         </div>
       </div>
 
-      <!-- Fallback for other question types (for now) -->
-      <div *ngIf="question.questionType !== FeedbackQuestionType.TEXT && question.questionType !== FeedbackQuestionType.MCQ && question.questionType !== FeedbackQuestionType.MSQ && question.questionType !== FeedbackQuestionType.NUMSCALE && question.questionType !== FeedbackQuestionType.CONSTSUM && question.questionType !== FeedbackQuestionType.CONSTSUM_OPTIONS && question.questionType !== FeedbackQuestionType.CONSTSUM_RECIPIENTS && question.questionType !== FeedbackQuestionType.CONTRIB">
+      <!-- RUBRIC Question Visualization -->
+      <div *ngIf="question.questionType === FeedbackQuestionType.RUBRIC">
+        <h5>Rubric Response Analytics</h5>
+        <div class="row mb-3">
+          <div class="col-md-4">
+            <div class="card">
+              <div class="card-body">
+                <h6 class="card-title">Response Rate</h6>
+                <div class="mb-2">
+                  <div class="progress" style="height: 20px;">
+                    <div class="progress-bar"
+                         [class.bg-success]="responseRate >= 80"
+                         [class.bg-warning]="responseRate >= 50 && responseRate < 80"
+                         [class.bg-danger]="responseRate < 50"
+                         [style.width.%]="responseRate"
+                         role="progressbar">
+                      {{ responseRate.toFixed(1) }}%
+                    </div>
+                  </div>
+                </div>
+                <small class="text-muted">{{ respondedCount }} out of {{ responses.length }} respondents</small>
+              </div>
+            </div>
+            <div class="card mt-3">
+              <div class="card-body">
+                <h6 class="card-title">Rubric Overview</h6>
+                <div class="row text-center">
+                  <div class="col-12 mb-2">
+                    <div class="text-primary">
+                      <strong>{{ rubricSubQuestions.length }}</strong>
+                      <br>
+                      <small>Criteria</small>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <div class="text-info">
+                      <strong>{{ rubricChoices.length }}</strong>
+                      <br>
+                      <small>Rating Levels</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-8">
+            <div class="card">
+              <div class="card-body">
+                <h6 class="card-title">Rating Distribution by Criteria</h6>
+                <div *ngFor="let subQuestion of rubricSubQuestions" class="mb-4">
+                  <h6 class="fw-bold text-dark">{{ subQuestion }}</h6>
+                  <div *ngFor="let choice of rubricChoices" class="mb-2">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                      <span>{{ choice }}</span>
+                      <span class="badge bg-light text-dark">{{ rubricChoiceFrequency[subQuestion][choice] }} ({{ rubricChoicePercentage[subQuestion][choice] }}%)</span>
+                    </div>
+                    <div class="progress" style="height: 10px;">
+                      <div class="progress-bar bg-light"
+                           [style.width.%]="rubricChoicePercentage[subQuestion][choice]"
+                           role="progressbar">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div *ngIf="rubricSubQuestions.length === 0" class="text-muted">
+                  <em>No valid responses available for analysis</em>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RANK_OPTIONS Question Visualization -->
+      <div *ngIf="question.questionType === FeedbackQuestionType.RANK_OPTIONS">
+        <h5>Rank Options Response Analytics</h5>
+        <div class="row mb-3">
+          <div class="col-md-4">
+            <div class="card">
+              <div class="card-body">
+                <h6 class="card-title">Response Rate</h6>
+                <div class="mb-2">
+                  <div class="progress" style="height: 20px;">
+                    <div class="progress-bar"
+                         [class.bg-success]="responseRate >= 80"
+                         [class.bg-warning]="responseRate >= 50 && responseRate < 80"
+                         [class.bg-danger]="responseRate < 50"
+                         [style.width.%]="responseRate"
+                         role="progressbar">
+                      {{ responseRate.toFixed(1) }}%
+                    </div>
+                  </div>
+                </div>
+                <small class="text-muted">{{ respondedCount }} out of {{ responses.length }} respondents</small>
+              </div>
+            </div>
+            <div class="card mt-3">
+              <div class="card-body">
+                <h6 class="card-title">Ranking Overview</h6>
+                <div class="row text-center">
+                  <div class="col-12">
+                    <div class="text-primary">
+                      <strong>{{ rankOptions.length }}</strong>
+                      <br>
+                      <small>Options to Rank</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-8">
+            <div class="card">
+              <div class="card-body">
+                <h6 class="card-title">Average Ranking by Option</h6>
+                <div *ngFor="let option of rankOptions" class="mb-3">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="fw-bold">{{ option }}</span>
+                    <span class="badge bg-primary">Avg Rank: {{ rankOptionAverageRank[option] || 'N/A' }}</span>
+                  </div>
+                  <div class="progress" style="height: 15px;">
+                    <div class="progress-bar bg-primary"
+                         [style.width.%]="rankOptionAverageRank[option] ? (1 / rankOptionAverageRank[option]) * 100 : 0"
+                         role="progressbar">
+                    </div>
+                  </div>
+                  <small class="text-muted">Lower average rank = better ranking</small>
+                </div>
+                <div *ngIf="rankOptions.length === 0" class="text-muted">
+                  <em>No valid responses available for analysis</em>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RANK_RECIPIENTS Question Visualization -->
+      <div *ngIf="question.questionType === FeedbackQuestionType.RANK_RECIPIENTS">
+        <h5>Rank Recipients Response Analytics</h5>
+        <div class="row mb-3">
+          <div class="col-md-4">
+            <div class="card">
+              <div class="card-body">
+                <h6 class="card-title">Response Rate</h6>
+                <div class="mb-2">
+                  <div class="progress" style="height: 20px;">
+                    <div class="progress-bar"
+                         [class.bg-success]="responseRate >= 80"
+                         [class.bg-warning]="responseRate >= 50 && responseRate < 80"
+                         [class.bg-danger]="responseRate < 50"
+                         [style.width.%]="responseRate"
+                         role="progressbar">
+                      {{ responseRate.toFixed(1) }}%
+                    </div>
+                  </div>
+                </div>
+                <small class="text-muted">{{ respondedCount }} out of {{ responses.length }} respondents</small>
+              </div>
+            </div>
+            <div class="card mt-3">
+              <div class="card-body">
+                <h6 class="card-title">Ranking Summary</h6>
+                <div class="row text-center">
+                  <div class="col-6 mb-2">
+                    <div class="text-primary">
+                      <strong>{{ rankRecipientAverage }}</strong>
+                      <br>
+                      <small>Average Rank</small>
+                    </div>
+                  </div>
+                  <div class="col-6 mb-2">
+                    <div class="text-info">
+                      <strong>{{ rankRecipientMedian }}</strong>
+                      <br>
+                      <small>Median Rank</small>
+                    </div>
+                  </div>
+                  <div class="col-6">
+                    <div class="text-secondary">
+                      <strong>{{ rankRecipientMin }} - {{ rankRecipientMax }}</strong>
+                      <br>
+                      <small>Range</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-8">
+            <div class="card">
+              <div class="card-body">
+                <h6 class="card-title">Rank Distribution</h6>
+                <div *ngFor="let rank of rankRecipientDistribution | keyvalue: originalOrder" class="mb-3">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="fw-bold">Rank {{ rank.key }}</span>
+                    <span class="badge bg-warning text-dark">{{ rank.value }} responses</span>
+                  </div>
+                  <div class="progress" style="height: 15px;">
+                    <div class="progress-bar bg-warning"
+                         [style.width.%]="(rank.value / respondedCount) * 100"
+                         role="progressbar">
+                    </div>
+                  </div>
+                </div>
+                <div *ngIf="respondedCount === 0" class="text-muted">
+                  <em>No valid responses available for analysis</em>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fallback for other question types (now complete) -->
+      <div *ngIf="question.questionType !== FeedbackQuestionType.TEXT && question.questionType !== FeedbackQuestionType.MCQ && question.questionType !== FeedbackQuestionType.MSQ && question.questionType !== FeedbackQuestionType.NUMSCALE && question.questionType !== FeedbackQuestionType.CONSTSUM && question.questionType !== FeedbackQuestionType.CONSTSUM_OPTIONS && question.questionType !== FeedbackQuestionType.CONSTSUM_RECIPIENTS && question.questionType !== FeedbackQuestionType.CONTRIB && question.questionType !== FeedbackQuestionType.RUBRIC && question.questionType !== FeedbackQuestionType.RANK_OPTIONS && question.questionType !== FeedbackQuestionType.RANK_RECIPIENTS">
         <h5>Response Statistics</h5>
         <p>Total Responses: {{ respondedCount }} / {{ responses.length }}</p>
         <p>Response Rate: {{ responseRate.toFixed(2) }}%</p>
-        <p><em>Detailed analytics for {{ question.questionType }} questions coming soon...</em></p>
+        <p><em>This question type is not yet supported for detailed analytics.</em></p>
       </div>
     </div>
     <div *ngIf="!questionResult && !isLoading">
