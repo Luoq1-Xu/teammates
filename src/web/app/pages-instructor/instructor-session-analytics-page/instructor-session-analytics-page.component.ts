@@ -7,8 +7,8 @@ import { FeedbackSessionsService } from '../../../services/feedback-sessions.ser
 import { StatusMessageService } from '../../../services/status-message.service';
 import { FeedbackQuestion, FeedbackQuestions, FeedbackSession } from '../../../types/api-output';
 import { Intent } from '../../../types/api-request';
-import { ErrorMessageOutput } from '../../error-message-output';
 import { collapseAnim } from '../../components/teammates-common/collapse-anim';
+import { ErrorMessageOutput } from '../../error-message-output';
 
 export interface FeedbackQuestionAnalyticsModel {
   question: FeedbackQuestion;

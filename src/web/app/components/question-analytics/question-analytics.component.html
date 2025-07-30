@@ -1,9 +1,112 @@
 <tm-loading-retry [shouldShowRetry]="hasLoadingFailed" [message]="'Failed to load question analytics'" (retryEvent)="loadResponses()">
   <div *tmIsLoading="isLoading">
     <div *ngIf="questionResult">
-      <h5>Response Statistics</h5>
-      <p>Total Responses: {{ respondedCount }} / {{ responses.length }}</p>
-      <p>Response Rate: {{ responseRate.toFixed(2) }}%</p>
+      <!-- TEXT Question Visualization -->
+      <div *ngIf="question.questionType === FeedbackQuestionType.TEXT">
+        <h5>Response Analytics</h5>
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-body">
+                <h6 class="card-title">Response Rate</h6>
+                <div class="mb-2">
+                  <div class="progress" style="height: 25px;">
+                    <div class="progress-bar"
+                         [class.bg-success]="responseRate >= 80"
+                         [class.bg-warning]="responseRate >= 50 && responseRate < 80"
+                         [class.bg-danger]="responseRate < 50"
+                         [style.width.%]="responseRate"
+                         role="progressbar">
+                      {{ responseRate.toFixed(1) }}%
+                    </div>
+                  </div>
+                </div>
+                <small class="text-muted">{{ respondedCount }} out of {{ responses.length }} respondents</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-body">
+                <h6 class="card-title">Response Status</h6>
+                <div class="row text-center">
+                  <div class="col-6">
+                    <div class="text-success">
+                      <strong>{{ respondedCount }}</strong>
+                      <br>
+                      <small>Responded</small>
+                    </div>
+                  </div>
+                  <div class="col-6">
+                    <div class="text-muted">
+                      <strong>{{ responses.length - respondedCount }}</strong>
+                      <br>
+                      <small>No Response</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MCQ Question Visualization -->
+      <div *ngIf="question.questionType === FeedbackQuestionType.MCQ">
+        <h5>MCQ Response Analytics</h5>
+        <div class="row mb-3">
+          <div class="col-md-4">
+            <div class="card">
+              <div class="card-body">
+                <h6 class="card-title">Response Rate</h6>
+                <div class="mb-2">
+                  <div class="progress" style="height: 20px;">
+                    <div class="progress-bar"
+                         [class.bg-success]="responseRate >= 80"
+                         [class.bg-warning]="responseRate >= 50 && responseRate < 80"
+                         [class.bg-danger]="responseRate < 50"
+                         [style.width.%]="responseRate"
+                         role="progressbar">
+                      {{ responseRate.toFixed(1) }}%
+                    </div>
+                  </div>
+                </div>
+                <small class="text-muted">{{ respondedCount }} out of {{ responses.length }} respondents</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-8">
+            <div class="card">
+              <div class="card-body">
+                <h6 class="card-title">Choice Distribution</h6>
+                <div *ngFor="let choice of mcqChoices" class="mb-3">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="fw-bold">{{ choice }}</span>
+                    <span class="badge bg-primary">{{ mcqAnswerFrequency[choice] }} ({{ mcqPercentagePerOption[choice] }}%)</span>
+                  </div>
+                  <div class="progress" style="height: 15px;">
+                    <div class="progress-bar bg-info"
+                         [style.width.%]="mcqPercentagePerOption[choice]"
+                         role="progressbar">
+                    </div>
+                  </div>
+                </div>
+                <div *ngIf="mcqChoices.length === 0" class="text-muted">
+                  <em>No valid responses available for analysis</em>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fallback for other question types (for now) -->
+      <div *ngIf="question.questionType !== FeedbackQuestionType.TEXT && question.questionType !== FeedbackQuestionType.MCQ">
+        <h5>Response Statistics</h5>
+        <p>Total Responses: {{ respondedCount }} / {{ responses.length }}</p>
+        <p>Response Rate: {{ responseRate.toFixed(2) }}%</p>
+        <p><em>Detailed analytics for {{ question.questionType }} questions coming soon...</em></p>
+      </div>
     </div>
     <div *ngIf="!questionResult && !isLoading">
       <p>No responses submitted for this question yet.</p>
