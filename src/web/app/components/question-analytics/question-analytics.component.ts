@@ -5,6 +5,7 @@ import { StatusMessageService } from '../../../services/status-message.service';
 import {
   FeedbackConstantSumQuestionDetails,
   FeedbackConstantSumResponseDetails,
+  FeedbackContributionResponseDetails,
   FeedbackMcqQuestionDetails,
   FeedbackMcqResponseDetails,
   FeedbackMsqQuestionDetails,
@@ -62,6 +63,15 @@ export class QuestionAnalyticsComponent implements OnChanges {
   constsumTotalPointsDistributed = 0;
   constsumAveragePointsPerResponse = 0;
 
+  // CONTRIB-specific properties
+  contribValues: number[] = [];
+  contribAverage = 0;
+  contribMedian = 0;
+  contribMin = 0;
+  contribMax = 0;
+  contribStdDev = 0;
+  contribDistribution: Record<number, number> = {};
+
   // Expose enum for template
   FeedbackQuestionType: typeof FeedbackQuestionType = FeedbackQuestionType;
 
@@ -109,6 +119,15 @@ export class QuestionAnalyticsComponent implements OnChanges {
             }
             if (this.question.questionType === FeedbackQuestionType.CONSTSUM) {
               this.calculateConstsumStatistics();
+            }
+            if (this.question.questionType === FeedbackQuestionType.CONSTSUM_OPTIONS) {
+              this.calculateConstsumStatistics();
+            }
+            if (this.question.questionType === FeedbackQuestionType.CONSTSUM_RECIPIENTS) {
+              this.calculateConstsumStatistics();
+            }
+            if (this.question.questionType === FeedbackQuestionType.CONTRIB) {
+              this.calculateContribStatistics();
             }
           }
         },
@@ -300,5 +319,48 @@ export class QuestionAnalyticsComponent implements OnChanges {
     this.constsumTotalPointsDistributed = totalPointsAcrossAllResponses;
     this.constsumAveragePointsPerResponse = validResponses.length > 0
       ? +(totalPointsAcrossAllResponses / validResponses.length).toFixed(1) : 0;
+  }
+
+  calculateContribStatistics(): void {
+    const validResponses = this.responses.filter((r) => !r.isMissingResponse);
+    this.contribValues = validResponses.map((response) => {
+      const contribResponse = response.responseDetails as FeedbackContributionResponseDetails;
+      return contribResponse.answer;
+    });
+
+    if (this.contribValues.length === 0) {
+      this.contribAverage = 0;
+      this.contribMedian = 0;
+      this.contribMin = 0;
+      this.contribMax = 0;
+      this.contribStdDev = 0;
+      this.contribDistribution = {};
+      return;
+    }
+
+    // Calculate basic statistics
+    const sortedValues = [...this.contribValues].sort((a, b) => a - b);
+    this.contribMin = sortedValues[0];
+    this.contribMax = sortedValues[sortedValues.length - 1];
+
+    // Calculate average
+    const sum = this.contribValues.reduce((acc, val) => acc + val, 0);
+    this.contribAverage = +(sum / this.contribValues.length).toFixed(2);
+
+    // Calculate median
+    const mid = Math.floor(sortedValues.length / 2);
+    this.contribMedian = sortedValues.length % 2 === 0
+      ? +((sortedValues[mid - 1] + sortedValues[mid]) / 2).toFixed(2)
+      : sortedValues[mid];
+
+    // Calculate standard deviation
+    const variance = this.contribValues.reduce((acc, val) => acc + Math.pow(val - this.contribAverage, 2), 0) / this.contribValues.length;
+    this.contribStdDev = +Math.sqrt(variance).toFixed(2);
+
+    // Calculate distribution
+    this.contribDistribution = {};
+    for (const value of this.contribValues) {
+      this.contribDistribution[value] = (this.contribDistribution[value] || 0) + 1;
+    }
   }
 }
