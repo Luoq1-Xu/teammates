@@ -5,6 +5,8 @@ import { StatusMessageService } from '../../../services/status-message.service';
 import {
   FeedbackMcqQuestionDetails,
   FeedbackMcqResponseDetails,
+  FeedbackMsqQuestionDetails,
+  FeedbackMsqResponseDetails,
   FeedbackQuestion,
   FeedbackQuestionType,
   QuestionOutput,
@@ -34,6 +36,13 @@ export class QuestionAnalyticsComponent implements OnChanges {
   mcqAnswerFrequency: Record<string, number> = {};
   mcqPercentagePerOption: Record<string, number> = {};
   mcqChoices: string[] = [];
+
+  // MSQ-specific properties
+  msqAnswerFrequency: Record<string, number> = {};
+  msqPercentagePerOption: Record<string, number> = {};
+  msqChoices: string[] = [];
+  msqTotalSelections = 0;
+  msqAverageSelectionsPerResponse = 0;
 
   // Expose enum for template
   FeedbackQuestionType: typeof FeedbackQuestionType = FeedbackQuestionType;
@@ -70,6 +79,9 @@ export class QuestionAnalyticsComponent implements OnChanges {
             this.calculateResponseRate();
             if (this.question.questionType === FeedbackQuestionType.MCQ) {
               this.calculateMcqStatistics();
+            }
+            if (this.question.questionType === FeedbackQuestionType.MSQ) {
+              this.calculateMsqStatistics();
             }
           }
         },
@@ -110,8 +122,8 @@ export class QuestionAnalyticsComponent implements OnChanges {
     for (const response of validResponses) {
       const mcqResponse = response.responseDetails as FeedbackMcqResponseDetails;
       const key = mcqResponse.isOther ? 'Other' : mcqResponse.answer;
-      if (this.mcqAnswerFrequency.hasOwnProperty(key)) {
-        this.mcqAnswerFrequency[key]++;
+      if (Object.prototype.hasOwnProperty.call(this.mcqAnswerFrequency, key)) {
+        this.mcqAnswerFrequency[key] += 1;
       }
     }
 
@@ -122,6 +134,55 @@ export class QuestionAnalyticsComponent implements OnChanges {
       const frequency = this.mcqAnswerFrequency[choice] || 0;
       const percentage = totalValidResponses > 0 ? (frequency / totalValidResponses) * 100 : 0;
       this.mcqPercentagePerOption[choice] = +percentage.toFixed(1);
+    }
+  }
+
+  calculateMsqStatistics(): void {
+    const msqQuestion = this.question.questionDetails as FeedbackMsqQuestionDetails;
+    this.msqChoices = [...msqQuestion.msqChoices];
+
+    // Initialize frequency counters
+    this.msqAnswerFrequency = {};
+    for (const choice of msqQuestion.msqChoices) {
+      this.msqAnswerFrequency[choice] = 0;
+    }
+    if (msqQuestion.otherEnabled) {
+      this.msqAnswerFrequency['Other'] = 0;
+      this.msqChoices.push('Other');
+    }
+
+    // Count responses (only non-missing responses)
+    const validResponses = this.responses.filter((r) => !r.isMissingResponse);
+    this.msqTotalSelections = 0;
+
+    for (const response of validResponses) {
+      const msqResponse = response.responseDetails as FeedbackMsqResponseDetails;
+
+      // Count all selected answers for this response
+      for (const answer of msqResponse.answers) {
+        if (Object.prototype.hasOwnProperty.call(this.msqAnswerFrequency, answer)) {
+          this.msqAnswerFrequency[answer] += 1;
+          this.msqTotalSelections += 1;
+        }
+      }
+
+      // Count "Other" selections if enabled and present
+      if (msqResponse.isOther && msqQuestion.otherEnabled) {
+        this.msqAnswerFrequency['Other'] += 1;
+        this.msqTotalSelections += 1;
+      }
+    }
+
+    // Calculate percentages and average selections
+    this.msqPercentagePerOption = {};
+    const totalValidResponses = validResponses.length;
+    this.msqAverageSelectionsPerResponse = totalValidResponses > 0
+      ? +(this.msqTotalSelections / totalValidResponses).toFixed(1) : 0;
+
+    for (const choice of this.msqChoices) {
+      const frequency = this.msqAnswerFrequency[choice] || 0;
+      const percentage = totalValidResponses > 0 ? (frequency / totalValidResponses) * 100 : 0;
+      this.msqPercentagePerOption[choice] = +percentage.toFixed(1);
     }
   }
 }
